@@ -43,6 +43,7 @@ function Title(props) {
           color: ${appConfig.theme.colors.neutrals['000']};
           font-size: 24px;
           font-weight: 600;
+          margin: 10px;
         }
       `}</style>
     </>
@@ -65,7 +66,7 @@ export default HomePage
  */
 
 export default function PaginaInicial() {
-  const username = 'peas'
+  const username = 'Bartolace'
 
   return (
     <>
@@ -114,7 +115,7 @@ export default function PaginaInicial() {
               marginBottom: '32px'
             }}
           >
-            <Title tag="h2">Boas vindas!</Title>
+            <Title tag="h2">O que há além das muralhas?</Title>
             <Text
               variant="body3"
               styleSheet={{
