@@ -80,7 +80,8 @@ export default function PaginaInicial() {
             onSubmit={function (infosDeEvento) {
               infosDeEvento.preventDefault()
               console.log('Alguém submeteu o form')
-              roteamento.push('/chat')
+              roteamento.push(`/chat?username=${username}`)
+              //para entrar na prox page
             }}
             styleSheet={{
               display: 'flex',

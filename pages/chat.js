@@ -1,7 +1,9 @@
 import { Box, Text, TextField, Image, Button } from '@skynexui/components'
 import React from 'react'
 import appConfig from '../config.json'
+import { useRouter } from 'next/router'
 import { createClient } from '@supabase/supabase-js'
+import { ButtonSendSticker } from '../src/components/ButtonSendSticker'
 
 const SUPABASE_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTY0MzQxMTU4MywiZXhwIjoxOTU4OTg3NTgzfQ.iaNO8qE2uRQeQmP3l29pyvzuI80P891-xK6JcGOp81Y'
@@ -9,13 +11,27 @@ const SUPABASE_URL = 'https://vtthdvhpklogzjydvefa.supabase.co'
 //links do supabase para conexão
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
+function escutaMensagensEmTempoReal(adicionaMensagem) {
+  return supabaseClient
+    .from('mensagens')
+    .on('INSERT', respostaLive => {
+      adicionaMensagem(respostaLive.new)
+    })
+    .subscribe()
+}
+
 export default function ChatPage() {
   // Sua lógica vai aqui
+  const roteamento = useRouter()
+  const usuarioLogado = roteamento.query.username
+  //console.log('Rotemento query: ', roteamento.query)
+  //pega o usuario logado pelo query que busca url
   const [mensagem, setMensagem] = React.useState('')
   const [listaDeMensagens, setListaDeMensagens] = React.useState([])
 
   React.useEffect(() => {
     //useEffect controla dados que não precisam ser recarregados com tanta frequência
+    //esta controlando a lista de mensagem att
     supabaseClient
       .from('mensagens')
       //pega a tabela mensagens
@@ -24,39 +40,57 @@ export default function ChatPage() {
       .order('id', { ascending: false })
       //reorganiza a ordem das mensagens, pelo supabase
       .then(({ data }) => {
-        //em vez de criar uma variavel, pega o objeto da função
-        console.log('Dados da consulta:', data)
+        //em vez de criar uma variavel, pega o objeto da função com data
+        //console.log('Dados da consulta:', data)
         setListaDeMensagens(data)
       })
-    //pegando as tabelas
+
+    const subscription = escutaMensagensEmTempoReal(novaMensagem => {
+      console.log('Nova mensagem:', novaMensagem)
+      console.log('listaDeMensagens:', listaDeMensagens)
+      // Quero reusar um valor de referencia (objeto/array)
+      // Passar uma função pro setState
+
+      // setListaDeMensagens([
+      //     novaMensagem,
+      //     ...listaDeMensagens
+      // ])
+      setListaDeMensagens(valorAtualDaLista => {
+        console.log('valorAtualDaLista:', valorAtualDaLista)
+        return [novaMensagem, ...valorAtualDaLista]
+      })
+      //pegou a lista e reorganizamos as novas mensagens
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
-  //só faz o useEffect depois de atualizar a listaDeMensagens
 
   function handleNovaMensagem(novaMensagem) {
     const mensagem = {
       //id: listaDeMensagens.length + 1,
-      de: 'bartolace',
+      de: usuarioLogado,
       texto: novaMensagem
     }
     //transforma a mensagem nova em um objeto
 
     supabaseClient
       .from('mensagens')
-      .insert([mensagem])
-      //colocando as mensagens no banco de dados
+      .insert([
+        // Tem que ser um objeto com os MESMOS CAMPOS que você escreveu no supabase
+        mensagem
+      ])
       .then(({ data }) => {
-        console.log('Criando mensagem:', data)
-        setListaDeMensagens([
-          // guarda as mensagens na listaDeMensagem após teclado Enter, //para usar as variáveis dos estados, primiero tem que chamar a função do estado, //os três pontos faz pegar os ITENS da lista
+        console.log('Criando mensagem: ', data)
+        /* setListaDeMensagens([
           data[0],
-          ...listaDeMensagens
-        ])
+          ...listaDeMensagens,
+        ]); */
       })
 
-    // Retorna a array vazia no estado quando é teclado Enter
     setMensagem('')
   }
-  //
   // ./Sua lógica vai aqui
   return (
     <Box
@@ -130,7 +164,7 @@ export default function ChatPage() {
 
               onKeyPress={event => {
                 //capta cada tecla digitada
-                //console.log(event) = mostra o que onKeyPress faz, ajuda a nos encontrar
+                ////console.log(event) = mostra o que onKeyPress faz, ajuda a nos encontrar
                 if (event.key === 'Enter') {
                   event.preventDefault()
                   //event pego da propriedade onKeyPress
@@ -150,6 +184,17 @@ export default function ChatPage() {
                 marginRight: '12px',
                 color: appConfig.theme.colors.neutrals[200]
               }}
+            />
+            {/* CallBack */}
+            <ButtonSendSticker
+              onStickerClick={sticker => {
+                /*  //console.log(
+                  '[USANDO O COMPONENTE]Salva esse sticker no banco',
+                  sticker
+                ) */
+                handleNovaMensagem(':sticker: ' + sticker)
+              }}
+              // cria um parametro para o componenete
             />
           </Box>
         </Box>
@@ -184,7 +229,7 @@ function Header() {
 
 function MessageList(props) {
   // recebe as propriedades passadas do seu própio componente
-  console.log(props)
+  //console.log(props)
   return (
     <Box
       tag="ul"
@@ -239,7 +284,15 @@ function MessageList(props) {
                 {new Date().toLocaleDateString()}
               </Text>
             </Box>
-            {mensagem.texto}
+            {/* Declarativo */}
+            {/* Condicional:  */}
+            {mensagem.texto.startsWith(':sticker:')}
+            {mensagem.texto.startsWith(':sticker:') ? (
+              <Image src={mensagem.texto.replace(':sticker:', '')} />
+            ) : (
+              mensagem.texto
+            )}
+            {/* {mensagem.texto} */}
           </Text>
         )
       })}
